@@ -1,0 +1,165 @@
+modifiers:
+  HOME: "{HOME}"
+  BASE_OUT_FOLDER: "{HOME}/MyTmp/Vision/train_seg_{TIME}"
+  N_CLASSES: 3
+
+  INPUT_SIZE: 640
+  BATCH_SIZE: 34
+  NUM_WORKERS: 20
+
+  MAX_EPOCH: 20
+  RESTART_EPOCH: true
+  N_SAVE_INTER_EPOCH: 1_000_000
+  GRAD_ACCUM: 1
+  MODEL_TYPE: "SegModelPytorch"
+
+base_out_folder: "{BASE_OUT_FOLDER}"
+log_dir: "{BASE_OUT_FOLDER}"
+stages_trainer_sorted: ["train", "valid", "valid_v2"]
+cnn_benchmark: true
+seed: null
+
+distributed_data_parallel: false
+node_rank: 0
+dist_address: '127.0.0.1:1234'
+world_size: 1
+
+engine:
+  model:
+    name: "{MODEL_TYPE}"
+    half: false
+    find_unused_parameters: false
+    args:
+      arch: "FPN"
+      encoder_name: "se_resnext50_32x4d"
+      encoder_weights: "imagenet"
+      in_channels: 3
+      out_classes: "{N_CLASSES}"
+      verbose: false
+    resume:
+      load_model_fn: "{HOME}/MyTmp/Vision/tmp_model.ckpt"
+      save_model_dir: "{BASE_OUT_FOLDER}/models"
+      save_tmp_model_fn: "{HOME}/MyTmp/Vision/tmp_model.ckpt"
+      load_optimizer: true
+      load_scheduler: false
+      save_all: true
+      strict: true
+
+train:
+  n_log_interval: 50
+  n_save_inter_epoch: "{N_SAVE_INTER_EPOCH}"
+  max_epochs: "{MAX_EPOCH}"
+  restart_epoch: "{RESTART_EPOCH}"
+  grad_accum: "{GRAD_ACCUM}"
+  non_blocking: true
+
+clipper:
+  name: null
+  args: null
+
+loader:
+  train:
+    batch_size: "{BATCH_SIZE}"
+    num_workers: "{NUM_WORKERS}"
+    pin_memory: true
+    drop_last: true
+  valid_v2:
+    batch_size: "{BATCH_SIZE}"
+    num_workers: "{NUM_WORKERS}"
+    pin_memory: true
+    drop_last: false
+  valid:
+    batch_size: "{BATCH_SIZE}"
+    num_workers: "{NUM_WORKERS}"
+    pin_memory: true
+    drop_last: false
+
+dataset:
+  name: "DatasetSeg"
+  train:
+    transf_degree: 0.40
+    n_classes: "{N_CLASSES}"
+    classes: [
+      "lbl1", "lbl2", "lbl3"
+    ]
+    input_size: "{INPUT_SIZE}"
+    files_images:
+      subset1: [2, '~/MyTmp/ProjectDir/subset1/train_imgs.json']
+      subset2: [1, '~/MyTmp/ProjectDir/subset2/train_imgs.json']
+    files_mask:
+      subset1:
+        lbl1: '~/MyTmp/ProjectDir/subset1/lbl1/train_mask_split1.json'
+        lbl2: '~/MyTmp/ProjectDir/subset1/lbl2/train_mask_split1.json'
+        lbl3: '~/MyTmp/ProjectDir/subset1/lbl3/train_mask_split1.json'
+      subset2:
+        lbl1: '~/MyTmp/ProjectDir/subset2/lbl1/train_mask_split1.json'
+        lbl2: null
+        lbl3: null
+  valid:
+    n_classes: "{N_CLASSES}"
+    classes: [
+      "lbl1", "lbl2", "lbl3"
+    ]
+    input_size: "{INPUT_SIZE}"
+      subset1: [2, '~/MyTmp/ProjectDir/subset1/val_imgs.json']
+      subset2: [1, '~/MyTmp/ProjectDir/subset2/val_imgs.json']
+    files_mask:
+      subset1:
+        lbl1: '~/MyTmp/ProjectDir/subset1/lbl1/val_mask_split1.json'
+        lbl2: '~/MyTmp/ProjectDir/subset1/lbl2/val_mask_split1.json'
+        lbl3: '~/MyTmp/ProjectDir/subset1/lbl3/val_mask_split1.json'
+      subset2:
+        lbl1: '~/MyTmp/ProjectDir/subset2/lbl1/val_mask_split1.json'
+        lbl2: null
+        lbl3: null
+
+  valid_v2:
+    n_classes: "{N_CLASSES}"
+    classes: [
+      "lbl1", "lbl2", "lbl3"
+    ]
+    input_size: "{INPUT_SIZE}"
+      subset1: [2, '~/MyTmp/ProjectDir/subset1/val_imgs.json']
+      subset2: [1, '~/MyTmp/ProjectDir/subset2/val_imgs.json']
+    files_mask:
+      subset1:
+        lbl1: '~/MyTmp/ProjectDir/subset1/lbl1/val_mask_split1.json'
+        lbl2: '~/MyTmp/ProjectDir/subset1/lbl2/val_mask_split1.json'
+        lbl3: '~/MyTmp/ProjectDir/subset1/lbl3/val_mask_split1.json'
+      subset2:
+        lbl1: '~/MyTmp/ProjectDir/subset2/lbl1/val_mask_split1.json'
+        lbl2: null
+        lbl3: null
+
+optimizer:
+  name: "Adam"
+  args:
+    lr: 0.001
+    betas: [0.9, 0.999]
+    eps: 1.e-08
+    weight_decay: 0
+
+scheduler:
+  name: "StepLR"
+  step_scheduler_at_save: false
+  args:
+    step_size: 1.
+    gamma: 0.7943282347242815
+    last_epoch: -1
+
+loss:
+  name: "DicePlusFocalLoss"
+  args:
+    mode: "binary"
+    from_logits: true
+
+metric:
+- name: "SMPperImgSpecificity"
+  args:
+    threshold: 0.5
+- name: "SMPperImgSensitivity"
+  args:
+    threshold: 0.5
+- name: "SMPperImgIOU"
+  args:
+    threshold: 0.5

@@ -1,0 +1,8 @@
+version: '3'
+
+services:
+  segment:
+    image: dagnino/server:v2.0.0
+    restart: always
+    ports:
+      - "8080:8080"

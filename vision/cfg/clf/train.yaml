@@ -1,0 +1,148 @@
+modifiers:
+  HOME: "{HOME}"
+  BASE_OUT_FOLDER: "{HOME}/MyTmp/Vision/train_clf_{TIME}"
+  N_CLASSES: 12
+
+  TRANSF_DEGREE: 0.5
+  INPUT_SIZE: 640
+  FREEZE_CNN: true
+
+  BATCH_SIZE: 240
+  NUM_WORKERS: 20
+
+  MAX_EPOCH: 40
+  RESTART_EPOCH: true
+  N_SAVE_INTER_EPOCH: 1_000_000
+  GRAD_ACCUM: 1
+  MODEL_TYPE: "SegModelPytorchClf"
+
+base_out_folder: "{BASE_OUT_FOLDER}"
+log_dir: "{BASE_OUT_FOLDER}"
+name_save_ckpt: "valid"
+stages_trainer_sorted: ["train", "valid", "valid_v2"]
+cnn_benchmark: true
+seed: null
+
+distributed_data_parallel: true
+node_rank: 0
+dist_address: '127.0.0.1:1234'
+world_size: 1
+
+engine:
+  model:
+    name: "{MODEL_TYPE}"
+    half: false
+    find_unused_parameters: false
+    args:
+      arch: "FPN"
+      clip_max: null
+      freeze_cnn: "{FREEZE_CNN}"
+      encoder_name: "se_resnext50_32x4d"
+      encoder_weights: "imagenet"
+      in_channels: 3
+      n_features_out: 2048
+      out_classes: "{N_CLASSES}"
+      verbose: false
+    resume:
+      load_model_fn: "{HOME}/MyTmp/Vision/tmp_model.ckpt"
+      save_model_dir: "{BASE_OUT_FOLDER}/models"
+      save_tmp_model_fn: "{HOME}/MyTmp/Vision/tmp_model.ckpt"
+      load_optimizer: false
+      load_scheduler: false
+      save_all: true
+      strict: false
+
+train:
+  n_log_interval: 100
+  n_save_inter_epoch: "{N_SAVE_INTER_EPOCH}"
+  max_epochs: "{MAX_EPOCH}"
+  restart_epoch: "{RESTART_EPOCH}"
+  grad_accum: "{GRAD_ACCUM}"
+  non_blocking: true
+
+clipper:
+  name: null
+  args: null
+
+loader:
+  train:
+    batch_size: "{BATCH_SIZE}"
+    num_workers: "{NUM_WORKERS}"
+    pin_memory: true
+    drop_last: true
+  valid_v2:
+    batch_size: "{BATCH_SIZE}"
+    num_workers: "{NUM_WORKERS}"
+    pin_memory: true
+    drop_last: false
+  valid:
+    batch_size: "{BATCH_SIZE}"
+    num_workers: "{NUM_WORKERS}"
+    pin_memory: true
+    drop_last: false
+
+dataset:
+  name: "DatasetClf"
+  train:
+    transf_degree: "{TRANSF_DEGREE}"
+    n_classes: "{N_CLASSES}"
+    base_img_dirs: [
+      '~/MyData/ProjectDir/subset1/images',
+      '~/MyData/ProjectDir/subset2/images'
+    ]
+    fns_annots: [
+      [2, 1, '~/MyData/ProjectDir/subset1/data.json'],
+      [1, 1, null],
+    ]
+    input_size: "{INPUT_SIZE}"
+  valid_v2:
+    n_classes: "{N_CLASSES}"
+    base_img_dirs: [
+      '~/MyData/ProjectDir/subset1/images',
+      '~/MyData/ProjectDir/subset2/images',
+    ]
+    fns_annots: [
+      [1, 1, '~/subset1/val_clf_split1.json'],
+      [1, 1, null],
+    ]
+    input_size: "{INPUT_SIZE}"
+  valid:
+    n_classes: "{N_CLASSES}"
+    base_img_dirs: [
+      '~/MyData/subset1/images',
+    ]
+    fns_annots: [
+      [1, 1, '~/subset1/val_clf_split1.json'],
+    ]
+    input_size: "{INPUT_SIZE}"
+
+optimizer:
+  name: "Adam"
+  args:
+    lr: 0.0001
+    betas: [0.9, 0.999]
+    eps: 1.e-08
+    weight_decay: 0.0001
+
+scheduler:
+  name: "StepLR"
+  step_scheduler_at_save: false
+  args:
+    step_size: 1.
+    gamma: 0.8912509381337456
+    last_epoch: -1
+
+loss:
+  name: "BCELogitsLoss"
+  args: null
+
+metric:
+- name: "BinaryAccuracy"
+  args:
+    threshold: 0.5
+- name: "BinaryTpr"
+  args:
+    threshold: 0.5
+- name: "BinaryTnr"
+  args:
+    threshold: 0.5

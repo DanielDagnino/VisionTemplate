@@ -1,0 +1,8 @@
+*.git/
+.eggs/
+.pytest_cache/
+.run/
+.idea/
+
+./flask_proto_clf/upload_folder
+./flask_proto_clf/app.py
